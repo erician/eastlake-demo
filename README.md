@@ -1,2 +1,2 @@
-# lullaby-demo
-this a demo for lullaby
+# eastlake-demo
+this a demo for eastlake

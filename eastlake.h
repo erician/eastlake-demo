@@ -50,11 +50,6 @@ long sys_po_fstat(unsigned int pod, struct po_stat __user* statbuf);
 /*
  * user library functions in lullaby
  */
-
-/* 
- * for a po, the return value of first call po_malloc, if success, 
- * is the with the return value of sys_po_mmap with pgoff 0, if success.  
- */
 void *po_malloc(int pod, size_t size);
 void po_free(int pod, void *ptr);
 

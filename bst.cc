@@ -1,11 +1,11 @@
-#ifndef EASTLAKE_BINARY_SEARCH_TREE_H_
-#include "eastlake_binary_search_tree.h"
+#ifndef BST_H_
+#include "bst.h"
 #endif
 
 #include <sys/mman.h>
-#include<fcntl.h>
-#include<sys/stat.h>
-#include<errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <errno.h>
 
 BSTree::BSTree(std::string po_name) {
     po_name_ = po_name;
@@ -15,20 +15,20 @@ BSTree::BSTree(std::string po_name) {
 
 int BSTree::Open() {
     /* just the owner has read and write privilege */
-    pod_ = sys_po_open(po_name_.c_str(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
+    pod_ = po_open(po_name_.c_str(), O_CREAT|O_RDWR, S_IRUSR|S_IWUSR);
     if(pod_==-1) {
         std::cout<<"open po failed, errno: "<<errno<<std::endl;
         return -1;
     }
     /* get po state */
     struct po_stat statbuf;
-    if(sys_po_fstat(pod_, &statbuf) == -1) {
+    if(po_fstat(pod_, &statbuf) == -1) {
         std::cout<<"get po state failed, errno: "<<errno<<std::endl;
         return -1;
     }
     /* map po */
     if(statbuf.st_size != 0) { 
-        unsigned long reval = sys_po_mmap(NULL, statbuf.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, pod_, 0);
+        unsigned long reval = po_mmap(0, statbuf.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, pod_, 0);
         if(reval == -1) {
             meta_ = NULL;
             std::cout<<"map po failed, errno: "<<errno<<std::endl;
@@ -50,7 +50,7 @@ int BSTree::Open() {
     return 0;
 }
 
-int BSTree::Insert(BSTreeNode *node) {
+int BSTree::Insert(Value_t val) {
     if(meta_ == NULL) {
         return -1;
     }
@@ -61,27 +61,28 @@ int BSTree::Insert(BSTreeNode *node) {
         std::cout<<"malloc from po failed, errno: "<<errno<<std::endl;
         return -1;
     }
-    tmp->value_ = node->value_;
+    tmp->value_ = val;
     tmp->left_ = NULL;
     tmp->right_ = NULL;
     tmp->parent_ = NULL;
 
     if(meta_->root_node_ == NULL) {
         meta_->root_node_ = tmp;
+        meta_->size_++;
         return 0;
     }
     BSTreeNode *curr, *parent;
     curr = parent = meta_->root_node_;
     while(curr != NULL) {
         parent = curr;
-        if(DefaultCmp(curr, node) >= 0) {
+        if(DefaultCmp(curr->value_, val) >= 0) {
             curr = curr->left_;
         }else {
-            curr = curr->left_;
+            curr = curr->right_;
         }
     }
     tmp->parent_ = parent;
-    if(DefaultCmp(parent, node) >= 0) {
+    if(DefaultCmp(parent->value_, val) >= 0) {
         parent->left_ = tmp;
     }else {
         parent->right_ = tmp;
@@ -92,10 +93,10 @@ int BSTree::Insert(BSTreeNode *node) {
 
 
 
-int BSTree::Delete(BSTreeNode *node) {
-    BSTreeNode *found_node = Find(node);
+bool BSTree::Delete(Value_t val) {
+    BSTreeNode *found_node = Find(val);
     if(found_node == NULL) {
-        return -1;
+        return false;
     }
     if(found_node->left_ == NULL) {
         Transplant(found_node, found_node->right_);
@@ -114,17 +115,29 @@ int BSTree::Delete(BSTreeNode *node) {
     }
     meta_->size_--;
     po_free(pod_, found_node);
-    return 0;
+    return true;
 }
 
-BSTreeNode* BSTree::Find(BSTreeNode *node) {
-    if(meta_ == NULL || meta_->root_node_ == NULL) {
+bool BSTree::Search(Value_t val) {
+    BSTreeNode *found_node = Find(val);
+    if (found_node == NULL)
+        return false;
+    else
+        return true; 
+}
+
+
+BSTreeNode* BSTree::Find(Value_t val) {
+    if (meta_ == NULL) {
+        return NULL;
+    }
+    if (meta_->root_node_ == NULL) {
         return NULL;
     }
     BSTreeNode *curr = meta_->root_node_;
     int cmp_result;
     while(curr != NULL) {
-        cmp_result = DefaultCmp(curr, node);
+        cmp_result = DefaultCmp(curr->value_, val);
         if(cmp_result == 0) {
             return curr;
         }else if(cmp_result > 0) {
@@ -159,13 +172,18 @@ void BSTree::Transplant(BSTreeNode *old_node, BSTreeNode *new_node) {
     }
 }
 
-int BSTree::DefaultCmp(BSTreeNode *node1, BSTreeNode *node2) {
-    if(node1->value_ == node2->value_) {
+int BSTree::DefaultCmp(Value_t val1, Value_t val2) {
+    if(val1 == val2) {
         return 0;
-    }else if(node1->value_ > node2->value_) {
+    }else if(val1 > val2) {
         return 1;
     }else {
         return -1;
     }
 }
 
+int BSTree::Size() {
+    if (meta_ != nullptr)
+        return meta_->size_;
+    return -1;
+}

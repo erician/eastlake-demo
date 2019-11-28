@@ -17,6 +17,9 @@ struct BSTreeNode {
 struct BSTreeMetadata {
     BSTreeNode *root_node_;
     int size_;
+#ifdef USE_SLAB
+    struct slab_chain s;
+#endif
 };
 
 class BSTree {

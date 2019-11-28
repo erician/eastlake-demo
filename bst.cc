@@ -27,7 +27,7 @@ int BSTree::Open() {
         return -1;
     }
     /* map po */
-    if(statbuf.st_size != 0) { 
+    if(statbuf.st_size != 0) {
         unsigned long reval = po_mmap(0, statbuf.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, pod_, 0);
         if(reval == -1) {
             meta_ = NULL;
@@ -36,16 +36,19 @@ int BSTree::Open() {
         }
         meta_ = (BSTreeMetadata*)reval;
     }else {
-        /* po_malloc is a user level library function, which will call sys_po_mmap, 
-        so, we don't need to call it again */
-        /* be careful, when you first use po_malloc with a persistent object */
-        meta_ = (BSTreeMetadata*)po_malloc(pod_, sizeof(struct BSTreeMetadata));
+        /* the first is used to store metadata */
+        meta_ = (BSTreeMetadata *)po_extend(pod_, PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE);
         if(meta_ == NULL) {
             std::cout<<"malloc from po failed, errno: "<<errno<<std::endl;
             return -1;
         }
         meta_->root_node_ = NULL;
         meta_->size_ = 0;
+#ifdef USE_SLAB
+        /* init slab */
+        po_memory_alloc_init(&meta_->s, sizeof(struct BSTreeNode));
+        meta_->s.pod = pod_;
+#endif
     }
     return 0;
 }
@@ -56,7 +59,11 @@ int BSTree::Insert(Value_t val) {
     }
 
     BSTreeNode *tmp;
+#ifdef USE_SLAB
+    tmp = (BSTreeNode *)po_malloc(&meta_->s);
+#else
     tmp = (BSTreeNode*)po_malloc(pod_, sizeof(struct BSTreeNode));
+#endif
     if(tmp == NULL) {
         std::cout<<"malloc from po failed, errno: "<<errno<<std::endl;
         return -1;
@@ -114,7 +121,11 @@ bool BSTree::Delete(Value_t val) {
         successor->left_->parent_ = successor;
     }
     meta_->size_--;
+#ifdef USE_SLAB
+    po_free(&meta_->s, found_node);
+#else
     po_free(pod_, found_node);
+#endif
     return true;
 }
 

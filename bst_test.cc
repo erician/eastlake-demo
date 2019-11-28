@@ -11,7 +11,7 @@
 #include <unistd.h>
 
 #define NR_OPERATIONS   10000
-#define BST_OBJECT_NAME "bst"
+#define BST_OBJECT_NAME "bst3"
 #define INPUT_FILE      "values.txt"   // using input_gen.cpp to generate data file
 
 #define NR_THREADS      1           // must be equal or less nr_cpus
@@ -55,7 +55,7 @@ void _delete(BSTree *bst, Value_t *values, int cur_nr_threads) {
 
 void print_result(int thread_num, BSTree *bst) {
     double total_time = times[1] - times[0];
-    std::cout << "thread num: " << thread_num+1;
+    std::cout << "thread num: " << thread_num;
     std::cout <<", total time: " << total_time << \
     ", OPS: " << NR_OPERATIONS*1.0/(total_time) << \
     ", size: " << bst->Size() << std::endl;

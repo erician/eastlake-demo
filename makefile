@@ -10,13 +10,16 @@ CFLAGS = -g -Wall -Wno-unused -Wno-return-type -Wno-sign-compare -std=c++17 -I.
 
 JUNK = *~ *.o *.a *_ut  *-test *-*
 
-bst-test: bst_test.o bst.o
+bst-test: bst_test.o bst.o slab.o
 	$(LD) $(CFLAGS) -o $@ $^ $(LIBS) 
 
 bst_test.o: bst_test.cc
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 bst.o: bst.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+slab.o: slab.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:

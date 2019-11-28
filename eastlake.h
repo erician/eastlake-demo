@@ -16,6 +16,11 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "slab.h"
+
+#define PAGE_SIZE 4096
+#define USE_SLAB
+
 /*
  * struct po_stat
  */
@@ -77,18 +82,36 @@ static inline long po_fstat(unsigned int pod, struct po_stat *statbuf) {
 /*
  * user library functions in lullaby
  */
-static inline void *po_malloc(int pod, size_t size) {
+#ifndef USE_SLAB
+
+static void *po_malloc(int pod, size_t size) {
     long int retval = po_extend(pod, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE);
 	if (retval == -1)
         return nullptr;
     return (void*)retval;
 }
 
-static inline void po_free(int pod, void *ptr) {
+static void po_free(int pod, void *ptr) {
     int retval;
     retval = po_shrink(pod, (unsigned long)ptr, 4096);
     if (retval == -1)
         printf("po_shring failed, errno: %d\n", errno);
 }
+
+#else
+
+static void po_memory_alloc_init(struct slab_chain *const sch, const size_t itemsize) {
+	slab_init(sch, itemsize);
+}
+
+static void *po_malloc(struct slab_chain *const sch) {
+    return slab_alloc(sch);
+}
+
+static void po_free(struct slab_chain *const sch, const void *const addr) {
+    return slab_free(sch, addr);
+}
+
+#endif
 
 #endif

@@ -19,7 +19,7 @@
 #include "slab.h"
 
 #define PAGE_SIZE 4096
-#define USE_SLAB
+// #define USE_SLAB
 
 /*
  * struct po_stat
@@ -52,14 +52,13 @@ static inline long po_close(unsigned int pod) {
 	return syscall(403, pod);
 }
 
-static inline long po_mmap(unsigned long addr, unsigned long len, \
-                 unsigned long prot, unsigned long flags, \
-                 unsigned int pod, unsigned long pgoff) {
-	return syscall(404, addr, len, prot, flags, pod, pgoff);
+static inline long po_chunk_mmap(unsigned int pod, unsigned long addr, \
+                 unsigned long prot, unsigned long flags) {
+	return syscall(404, pod, addr, prot, flags);
 }
 
-static inline long po_munmap(unsigned long addr, size_t len) {
-	return syscall(405, addr, len);
+static inline long po_chunk_munmap(unsigned long addr) {
+	return syscall(405, addr);
 }
 
 static inline long po_extend(unsigned int pod, size_t len, \
@@ -77,6 +76,11 @@ static inline long po_stat(const char *poname, struct po_stat *statbuf) {
 
 static inline long po_fstat(unsigned int pod, struct po_stat *statbuf) {
 	return syscall(409, pod, statbuf);
+}
+
+static inline long po_chunk_next(unsigned int pod, unsigned long last, \
+	size_t size, unsigned long *addrbuf) {
+	return syscall(410, pod, last, size, addrbuf);
 }
 
 /*

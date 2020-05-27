@@ -28,13 +28,25 @@ int BSTree::Open() {
     }
     /* map po */
     if(statbuf.st_size != 0) {
-        unsigned long reval = po_mmap(0, statbuf.st_size, PROT_READ|PROT_WRITE, MAP_PRIVATE, pod_, 0);
-        if(reval == -1) {
-            meta_ = NULL;
-            std::cout<<"map po failed, errno: "<<errno<<std::endl;
-            return -1;
-        }
-        meta_ = (BSTreeMetadata*)reval;
+        unsigned long chunks[1];
+        chunks[0] = (unsigned long)NULL;
+        bool is_first_chunk = true;
+        do {
+            if (po_chunk_next(pod_, chunks[0], 1, chunks) < 0) {
+                std::cout << "po chunk next error, errno: " << errno << std::endl;
+                return -1;
+            }
+            if (chunks[0] == (unsigned long)NULL)
+                break;
+            if (is_first_chunk) {
+                meta_ = (BSTreeMetadata*)(chunks[0]);
+                is_first_chunk = false;
+            }
+            if (po_chunk_mmap(pod_, chunks[0], PROT_READ|PROT_WRITE, MAP_PRIVATE) < 0) {
+                std::cout << "po chunk mmap error, errno: " << errno << std::endl;
+                return -1;
+            }
+        } while(true);
     }else {
         /* the first is used to store metadata */
         meta_ = (BSTreeMetadata *)po_extend(pod_, PAGE_SIZE, PROT_READ|PROT_WRITE, MAP_PRIVATE);
